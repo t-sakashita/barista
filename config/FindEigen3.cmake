@@ -63,6 +63,7 @@ else (EIGEN3_INCLUDE_DIR)
 
   find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
       PATHS
+      $ENV{ROKKO_HOME} ${ROKKO_ROOT_DIR} /opt/rokko /opt/nano/rokko
       $ENV{EIGEN_HOME}
       $ENV{HOME}/src
       /usr/local/include
