@@ -54,8 +54,8 @@ endif()
 
 
 # program using	eigen_s
+if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
 string(REPLACE " " ";" EIGEN_S_LIB ${EIGEN_S_LIB})
-if( DEFINED EIGEN_S_LIB )
     set(TESTS2 hamiltonian_matrix_eigen_s)
     #set(TESTS2 "")
 
@@ -75,3 +75,15 @@ if( DEFINED EIGEN_S_LIB )
     endforeach(name)
 endif()
 
+if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
+
+  set(TESTS  SymmetricEig_iterator) 
+  #HermitianEig HermitianEigFromSequential
+  include_directories(${ELEMENTAL_INCLUDE_DIRS})
+
+  foreach(name ${TESTS})
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name} ${ELEMENTAL_LIBRARIES})
+    #add_alps_test(${name})
+  endforeach(name)
+endif()

@@ -1,4 +1,5 @@
-set(TESTS  SymmetricEig_iterator) 
+set(TESTS  SymmetricEig_frank)
+#SymmetricEig_iterator) 
 #HermitianEig HermitianEigFromSequential
 
 include_directories(${ELEMENTAL_INCLUDE_DIRS})
