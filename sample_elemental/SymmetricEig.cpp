@@ -13,8 +13,7 @@ using namespace elem;
 // Typedef our real type to 'R' for convenience
 typedef double R;
 
-int
-main( int argc, char* argv[] )
+int main( int argc, char* argv[] )
 {
     // Initialize Elemental. The full routine is elem::Initialize.
     // It detects whether or not you have already initialized MPI and 

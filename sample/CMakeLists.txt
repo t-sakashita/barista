@@ -7,7 +7,7 @@ foreach(name ${TESTS})
   add_alps_test(${name})
 endforeach(name)
 
-set(TESTS_SC hamiltonian_matrix_scalapack_pdsyev hamiltonian_matrix_scalapack_pdsyev_globalmat) 
+set(TESTS_SC hamiltonian_matrix_scalapack_pdsyev hamiltonian_matrix_scalapack_pdsyev_globalmat hamiltonian_matrix_scalapack_pdsyev_wrapping) 
 
 # program using ScaLAPACK
 foreach(name ${TESTS_SC})
@@ -75,18 +75,18 @@ string(REPLACE " " ";" EIGEN_S_LIB ${EIGEN_S_LIB})
     endforeach(name)
 endif()
 
-if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
+#if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
+#
+#  set(TESTS  hamiltonian_matrix_eigen_s) 
+#  #HermitianEig HermitianEigFromSequential
+#  include_directories(${ELEMENTAL_INCLUDE_DIRS})
 
-  set(TESTS  SymmetricEig_iterator) 
-  #HermitianEig HermitianEigFromSequential
-  include_directories(${ELEMENTAL_INCLUDE_DIRS})
-
-  foreach(name ${TESTS})
-    add_executable(${name} ${name}.cpp)
-    target_link_libraries(${name} ${ELEMENTAL_LIBRARIES})
-    #add_alps_test(${name})
-  endforeach(name)
-endif()
+#  foreach(name ${TESTS})
+#    add_executable(${name} ${name}.cpp)
+#    target_link_libraries(${name} ${ELEMENTAL_LIBRARIES})
+#    #add_alps_test(${name})
+#  endforeach(name)
+#endif()
 
 
 #if( DEFINED TRILINOS_PREFIX )
