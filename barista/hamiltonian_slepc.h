@@ -20,11 +20,6 @@ namespace barista {
 template<typename G = alps::coordinate_graph_type, typename I = short>
 class Hamiltonian {
 
-  //Teuchos::ParameterList GaleriList;
-  //  using Teuchos::RCP;
-  //using Teuchos::rcp;
-  //typedef Teuchos::ScalarTraits<double> STS;
-
 private:
   typedef alps::graph_helper<G> lattice_type;
   typedef alps::model_helper<I> model_type;

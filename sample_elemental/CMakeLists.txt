@@ -1,4 +1,4 @@
-set(TESTS  SymmetricEig_frank)
+set(TESTS  SymmetricEig_frank SymmetricEig_frank_localmat)
 #SymmetricEig_iterator) 
 #HermitianEig HermitianEigFromSequential
 

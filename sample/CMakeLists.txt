@@ -87,3 +87,17 @@ if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
     #add_alps_test(${name})
   endforeach(name)
 endif()
+
+
+#if( DEFINED TRILINOS_PREFIX )
+    set(TESTS2 hamiltonian_matrix_elemental)
+    include_directories(${ELEMENTAL_INCLUDE_DIRS})
+    foreach(name ${TESTS2})
+        add_executable(${name} ${name}.cpp)
+        #リンクオプション                                                                                                                                                                   
+        target_link_libraries(${name}  ${ALPS_LIBRARIES} ${ELEMENTAL_LIBRARIES})
+        ##LD_FLAG                                                                                                                                                                           
+        ##コンパイラオプション                                                                                                                                                              
+        #add_alps_test(${name})                                                                                                                                                             
+    endforeach(name)
+#endif()
