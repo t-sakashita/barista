@@ -1,0 +1,6 @@
+[submodule "submodules/rokko"]
+	path = submodules/rokko
+	url = git://github.com/t-sakashita/rokko.git
+[submodule "submodule/rokko"]
+	path = submodule/rokko
+	url = git://github.com/t-sakashita/rokko.git
