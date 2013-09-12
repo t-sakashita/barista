@@ -2,6 +2,6 @@ LATTICE = "chain lattice"
 MODEL = "spin"
 local_S = 1/2
 J = 1
-L = 2
+L = 4
 
 

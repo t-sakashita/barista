@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "mpi.h"
-#include <barista/hamiltonian_scalapack.h>
 
 // Eigen3に関するヘッダファイル
 #include <Eigen/Dense>
@@ -73,11 +72,10 @@ class Grid
 public:
   Grid(MPI_Comm& comm)
   {
-    int myrank, nprocs;
     MPI_Comm_rank(comm, &myrank);
     MPI_Comm_size(comm, &nprocs);
 
-    int ZERO=0, ONE=1;
+    const int ZERO=0, ONE=1;
     long MINUS_ONE = -1;
     blacs_pinfo_( myrank, nprocs );
     blacs_get_( MINUS_ONE, ZERO, ictxt );
@@ -97,6 +95,7 @@ public:
     }
   }
 
+  int myrank, nprocs;
   int myrow, mycol;
   int ictxt, nprow, npcol;
   int info;
@@ -107,47 +106,124 @@ public:
 class Distributed_Matrix
 {
 public:
-  Distributed_Matrix(const int& m, const int& n, Grid& g)
+  Distributed_Matrix(const int& m_global, const int& n_global, Grid& g) : m_global(m_global), n_global(n_global), g(g)
   {
     // ローカル行列の形状を指定
-
-    int dim = n;
-    nb = dim / g.nprow;
+    mb = m_global / g.nprow;
+    if (mb == 0) mb = 1;
+    //mb = 10;        
+    nb = n_global / g.npcol;
     if (nb == 0) nb = 1;
     //nb = 10;
 
-    int ZERO=0, ONE=1;
+    const int ZERO=0, ONE=1;
     
     cout << "nb=" << nb << endl;
-    int mA = numroc_( dim, nb, g.myrow, ZERO, g.nprow );
+    m_local = numroc_( m_global, mb, g.myrow, ZERO, g.nprow );
     //if (myrank == 0)
-    cout << "mA=" << mA << "  nprow=" << g.nprow << endl;
-    int nA = numroc_( dim, nb, g.mycol, ZERO, g.npcol );
+    cout << "mA=" << m_local << "  nprow=" << g.nprow << endl;
+    n_local = numroc_( n_global, nb, g.mycol, ZERO, g.npcol );
     //if (myrank == 0)
-    cout<< "nA=" << nA << "  npcol=" << g.npcol << endl;
-    int lld = mA;
+    cout<< "nA=" << n_local << "  npcol=" << g.npcol << endl;
+    int lld = m_local;
     if (lld == 0) lld = 1;
     cout << "lld=" << lld << endl;
-    descinit_(desc, m, n, nb, nb, ZERO, ZERO, g.ictxt, lld, info);
+    descinit_(desc, m_global, n_global, nb, nb, ZERO, ZERO, g.ictxt, lld, info);
     if (info) {
-      cerr << "error " << info << " at descinit function of descA " << "mA=" << mA << "  nA=" << nA << "  lld=" << lld << "." << endl;
+      cerr << "error " << info << " at descinit function of descA " << "mA=" << m_local << "  nA=" << n_local << "  lld=" << lld << "." << endl;
       exit(1);
     }
 
-    array = new double[mA*nA];
+    array = new double[m_local * n_local];
     if (array == NULL) {
       cerr << "failed to allocate array." << endl;
       exit(1);
     }
   }
 
+  ~Distributed_Matrix()
+  {
+   delete[] array;
+  }
+
+  int Symmetric_EigenSolver(Distributed_Matrix& A, double* w, Distributed_Matrix& Z);
+
+  int translate_l2g_row(int local_i) const
+  {
+    return (g.myrow * nb) + local_i + (local_i / nb) * nb * (g.nprow - 1);
+  }
+
+  int translate_l2g_col(const int& local_j) const
+  {
+    return (g.mycol * nb) + local_j + (local_j / nb) * nb * (g.npcol - 1);
+  }
+
+  int translate_g2l_row(const int& global_i) const
+  {
+    const int local_offset_block = global_i / nb;
+    return (local_offset_block - g.myrow) / g.nprow * nb + global_i % nb;
+  }
+
+  int translate_g2l_col(const int& global_j) const
+  {
+    const int local_offset_block = global_j / nb;
+    return (local_offset_block - g.mycol) / g.npcol * nb + global_j % nb;
+  }
+
+  bool is_gindex_myrow(const int& global_i) const
+  {
+    int local_offset_block = global_i / nb;
+    return (local_offset_block % g.nprow) == g.myrow;
+  }
+
+  bool is_gindex_mycol(const int& global_j) const
+  {
+    int local_offset_block = global_j / nb;
+    return (local_offset_block % g.npcol) == g.mycol;
+  }
+
+  int m_global, n_global;
   int desc[9];
   double* array;
-  int nb;
-  int mA, nA;
+  int mb, nb;
+  int m_local, n_local;
 private:
+  Grid g;
   int info;
 };
+
+
+int Symmetric_EigenSolver(Distributed_Matrix& A, double* w, Distributed_Matrix& Z)
+{
+  double* work = new double [1];
+  long lwork = -1;
+  int info = 0;
+
+  const int ZERO=0, ONE=1;
+  
+  // work配列のサイズの問い合わせ
+  pdsyev_( "V",  "U",  A.m_global,  A.array, ONE,  ONE,  A.desc, w, Z.array, ONE, ONE,
+ 	   Z.desc, work, lwork, info );
+  
+  lwork = work[0];
+  work = new double [lwork];
+  if (work == NULL) {
+    cerr << "failed to allocate work." << endl;
+    return info;
+  }
+  info = 0;
+  
+  // 固有値分解
+  pdsyev_( "V",  "U",  A.m_global,  A.array,  ONE,  ONE,  A.desc, w, Z.array, ONE, ONE,
+	   Z.desc, work, lwork, info );
+  
+  if (info) {
+    cerr << "error at pdsyev function." << endl;
+    exit(1);
+  }
+
+  return info;
+}
 
 void copy2localMatrix( double* A,double* A_global, const int& dim, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb )
 {
@@ -174,6 +250,7 @@ void copy2localMatrix( double* A,double* A_global, const int& dim, const int& np
     }
 }
 
+#include <barista/hamiltonian_scalapack_wrapping.h>
 
 // 固有値ルーチンのテストに使うFrank行列の理論固有値
 void exact_eigenvalue_frank(const int ndim, VectorXd& ev1)
@@ -184,39 +261,13 @@ void exact_eigenvalue_frank(const int ndim, VectorXd& ev1)
 
 
 int main(int argc, char *argv[]) {
-/************  MPI ***************************/
-   int myrank, nprocs;
+
    Initialize(argc, argv);
-   //MPI_Init(&argc, &argv);
-   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
    MPI_Comm comm = (MPI_Comm) MPI_COMM_WORLD;
-   //mpi::Comm comm = mpi::COMM_WORLD;
-   //const int commRank = mpi::CommRank(comm);
-
-/************  BLACS ***************************/
-
    Grid g(comm);
 
-   int ictxt, nprow, npcol, myrow, mycol, nb;
-   int info;
-   int ZERO=0, ONE=1;
-   long MINUS_ONE = -1;
-   blacs_pinfo_( myrank, nprocs );
-   blacs_get_( MINUS_ONE, ZERO, ictxt );
-
-   npcol = int(sqrt(nprocs+0.5));
-   while (1) {
-     if ( npcol == 1 ) break;
-     if ( (nprocs % npcol) == 0 ) break;
-     npcol = npcol-1;
-   }
-   nprow = nprocs / npcol;
-   blacs_gridinit_( ictxt, "Row", nprow, npcol );
-   blacs_gridinfo_( ictxt, nprow, npcol, myrow, mycol );
-
-   if (myrank == 0) {
-     cout << "nprow=" << nprow << "  npcol=" << npcol << endl;
+   if (g.myrank == 0) {
+     cout << "nprow=" << g.nprow << "  npcol=" << g.npcol << endl;
    }
 
    std::ifstream  ifs(argv[1]);
@@ -226,26 +277,27 @@ int main(int argc, char *argv[]) {
    hamiltonian.fill<double>(A_global_matrix);
    int dim = hamiltonian.dimension();
 
+   Distributed_Matrix A(dim, dim, g);
+   Distributed_Matrix Z(dim, dim, g);
+
+   hamiltonian.fill<double>(A);
+
+   // デバッグ用グローバル行列
    double* A_global = new double[dim*dim];
    if (A_global == NULL) {
      cerr << "failed to allocate A_global." << endl;
      exit(1);
    }
 
-   Distributed_Matrix A(dim, dim, g);
-   Distributed_Matrix Z(dim, dim, g);
-
-   hamiltonian.fill<double>(A.array, g.nprow, g.npcol, g.myrow, g.mycol, A.nb);
-
    // ローカル行列とグローバル行列が対応しているかを確認
    double value;
-   if (myrank == 0) cout << "A=" << endl;
+   if (g.myrank == 0) cout << "A=" << endl;
    for (int i=0; i<dim; ++i) {
      for (int j=0; j<dim; ++j) {
        pdelget_("A", " ", value, A.array, i + 1, j + 1, A.desc);  // Fortranでは添字が1から始まることに注意
-       if (myrank == 0)  cout << value << "  ";
+       if (g.myrank == 0)  cout << value << "  ";
      }
-     if (myrank == 0)  cout << endl;
+     if (g.myrank == 0)  cout << endl;
    }
 
    double *w = new double[dim];
@@ -254,30 +306,7 @@ int main(int argc, char *argv[]) {
      exit(1);
    }
 
-   double* work = new double [1];
-   long lwork = -1;
-   info = 0;
-
-   // work配列のサイズの問い合わせ
-   pdsyev_( "V",  "U",  dim,  A.array, ONE,  ONE,  A.desc, w, Z.array, ONE, ONE,
- 	   Z.desc, work, lwork, info );
-
-   lwork = work[0];
-   work = new double [lwork];
-   if (work == NULL) {
-     cerr << "failed to allocate work." << endl;
-     exit(1);
-   }
-   info = 0;
-
-   // 固有値分解
-   pdsyev_( "V",  "U",  dim,  A.array,  ONE,  ONE,  A.desc, w, Z.array, ONE, ONE,
-	    Z.desc, work, lwork, info );
-
-   if (info) {
-     cerr << "error at pdsyev function." << endl;
-     exit(1);
-   }
+   Symmetric_EigenSolver(A, w, Z);
 
    // 固有値の絶対値の降順に固有値(と対応する固有ベクトル)をソート
    // ソート後の固有値の添字をベクトルqに求める．
@@ -316,7 +345,7 @@ int main(int argc, char *argv[]) {
      eigvec_sorted.col(m) = eigvec.col(q[m]);    
    }
 
-   if (myrank==0) {
+   if (g.myrank==0) {
      cout << "Theoretical eigenvalues= " << th_eigval.transpose() << endl;
      cout << "Computed eigenvalues= " << eigval_sorted.transpose() << endl;
      cout << "Computed ones - theoretical ones= " << (eigval_sorted - th_eigval).transpose() << endl << endl;
@@ -332,9 +361,8 @@ int main(int argc, char *argv[]) {
    }
 
    delete[] A_global;
-   delete[] A.array;
    delete[] w;
-   delete[] Z.array;
+
    Finalize();
 }
 

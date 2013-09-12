@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     }
 
     // Sort the eigensolution,
-    SortEig( w, X );
+    //    SortEig( w, X );
     
     if( print ) {
       w.Print("Sorted eigenvalues of H");

@@ -1,4 +1,4 @@
-set(TESTS hamiltonian_matrix_Eigen) 
+set(TESTS hamiltonian_matrix_Eigen)
 #set(TESTS MatrixXd
 
 foreach(name ${TESTS})
@@ -7,13 +7,13 @@ foreach(name ${TESTS})
   add_alps_test(${name})
 endforeach(name)
 
-set(TESTS_SC hamiltonian_matrix_scalapack_pdsyev hamiltonian_matrix_scalapack_pdsyev_globalmat hamiltonian_matrix_scalapack_pdsyev_wrapping) 
+#set(TESTS_SC hamiltonian_matrix_scalapack_pdsyev hamiltonian_matrix_scalapack_pdsyev_globalmat hamiltonian_matrix_scalapack_pdsyev_wrapping_gather5)
 
 # program using ScaLAPACK
 foreach(name ${TESTS_SC})
   add_executable(${name} ${name}.C)
   target_link_libraries(${name} ${ALPS_LIBRARIES})
-  target_link_libraries(${name} "-lmkl_scalapack_lp64" "-lmkl_blacs_intelmpi_lp64" "-mkl=parallel")
+  target_link_libraries(${name} "-lmkl_scalapack_lp64" "-lmkl_blacs_intelmpi_lp64" "-mkl=sequential")
   add_alps_test(${name})
 endforeach(name)
 
@@ -46,7 +46,7 @@ if( DEFINED TRILINOS_PREFIX )
         add_executable(${name} ${name}.cpp)
         #リンクオプション
 	target_link_libraries(${name}  ${ALPS_LIBRARIES} ${ADDITIONAL_LIBRARIES})
-        ##LD_FLAG 
+        ##LD_FLAG
         ##コンパイラオプション
         #add_alps_test(${name})
     endforeach(name)
@@ -77,7 +77,7 @@ endif()
 
 #if( DEFINED EIGEN_S_LIB AND EIGEN_S_INC )
 #
-#  set(TESTS  hamiltonian_matrix_eigen_s) 
+#  set(TESTS  hamiltonian_matrix_eigen_s)
 #  #HermitianEig HermitianEigFromSequential
 #  include_directories(${ELEMENTAL_INCLUDE_DIRS})
 
@@ -94,10 +94,10 @@ endif()
     include_directories(${ELEMENTAL_INCLUDE_DIRS})
     foreach(name ${TESTS2})
         add_executable(${name} ${name}.cpp)
-        #リンクオプション                                                                                                                                                                   
+        #リンクオプション
         target_link_libraries(${name}  ${ALPS_LIBRARIES} ${ELEMENTAL_LIBRARIES})
-        ##LD_FLAG                                                                                                                                                                           
-        ##コンパイラオプション                                                                                                                                                              
-        #add_alps_test(${name})                                                                                                                                                             
+        ##LD_FLAG
+        ##コンパイラオプション
+        #add_alps_test(${name})
     endforeach(name)
 #endif()

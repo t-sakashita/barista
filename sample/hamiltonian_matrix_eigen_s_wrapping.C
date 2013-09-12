@@ -8,14 +8,14 @@
 
 #define eigen_init_wrapper eigen_init_wrapper_
 #define eigen_free_wrapper eigen_free_wrapper_
-#define CSTAB_get_optdim cstab_get_optdim_  // オブジェクトファイルでは小文字に変換する                                                                                                     
+#define CSTAB_get_optdim cstab_get_optdim_  // オブジェクトファイルでは小文字に変換する
 #define matrix_set matrix_set_
 #define matrix_adjust_s matrix_adjust_s_
 #define eigen_s eigen_s_
 #define ev_test_2D ev_test_2d_
 
-//extern "C" void eigen_init(int&);                                                                                                                                                         
-//extern "C" void eigen_free(int&);                                                                                                                                                         
+//extern "C" void eigen_init(int&);
+//extern "C" void eigen_free(int&);
 
 extern "C" void eigen_init_wrapper(int&, int&, int&);
 extern "C" void eigen_free_wrapper(int&);
@@ -46,24 +46,6 @@ using namespace std;
 typedef Eigen::MatrixXd matrix_type;
 
 
-void Initialize(int argc, char *argv[])
-{
-  MPI_Init(&argc, &argv);/* starts MPI */
-}
-
-void Finalize()
-{
-  MPI_Finalize();
-}
-
-class Grid g
-{
-  Grid(mpi::Comm& g)
-    {}
-}
-( comm );
-
-
 //template <typename R>
 //class DistMatrix(const int& m, const int& n, g H( n, n, g );
 
@@ -83,12 +65,12 @@ int main (int argc, char *argv[])
   const int myrank = mpi::CommRank( comm );
 
   std::ifstream  ifs(argv[1]);
-  alps::Parameters params(ifs);     
+  alps::Parameters params(ifs);
   //params["L"] = 7;
   cout << "L=" << params["L"] << endl;
   barista::Hamiltonian<> hamiltonian(params);
-  matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());        
-  hamiltonian.fill<double>(matrix);                            
+  matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());
+  hamiltonian.fill<double>(matrix);
   //std::cout << matrix << std::endl;
   int n = hamiltonian.dimension();
 
@@ -106,7 +88,7 @@ int main (int argc, char *argv[])
     cerr << "error: a" << endl;
     return 1;
   }
-  for (int i=0; i<n; ++i) { 
+  for (int i=0; i<n; ++i) {
     for (int j=0; j<n; ++j)
       a[i*n+j] = matrix(i,j);
   }
@@ -116,7 +98,7 @@ int main (int argc, char *argv[])
 
   int size_of_col_local, size_of_row_local;
   para_int = 2;   eigen_init_wrapper(para_int, size_of_col_local, size_of_row_local);
-  
+
   int NPROW = cycl2d_.size_of_col;
   int NPCOL = cycl2d_.size_of_row;
   int nx = ((n-1)/NPROW+1);
@@ -178,7 +160,7 @@ int main (int argc, char *argv[])
   MPI_Barrier(MPI_COMM_WORLD);
   end = MPI_Wtime();
 
-  int* q = new int[n];  
+  int* q = new int[n];
   if (rank == 0) {
     // 固有値を（絶対値のではなく）昇順に並べる
     if (q==NULL) {
@@ -191,7 +173,7 @@ int main (int argc, char *argv[])
     for (int k=0; k<n; ++k) {
       emax = w[q[k]];
       for (int i=k+1; i<n; ++i) {
-	if (emax > w[q[i]]) {       // 昇順になっていないとき、交換      
+	if (emax > w[q[i]]) {       // 昇順になっていないとき、交換
 	  emax = w[q[i]];
 	  int qq = q[k];
 	  q[k] = q[i];

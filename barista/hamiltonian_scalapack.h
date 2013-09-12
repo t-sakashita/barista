@@ -126,7 +126,7 @@ public:
   }
 
 template<typename T>
-void fill(double* A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb) const {
+void fill(Distributed_Matrix& A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb) const {
 
   typedef T value_type;
 
@@ -148,7 +148,7 @@ void fill(double* A, const int& nprow, const int& npcol, const int& myrow, const
 }
 
 template<typename T>
-void add_to_matrix(double* A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb, const site_descriptor v) const {
+void add_to_matrix(Distributed_Matrix& A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb, const site_descriptor v) const {
   int ZERO = 0;
   int dim = dimension();
   int mA = numroc_( dim, nb, myrow, ZERO, nprow );
@@ -160,7 +160,7 @@ void add_to_matrix(double* A, const int& nprow, const int& npcol, const int& myr
   alps::multi_array<T, 2>
   site_matrix(get_matrix(T(), model_.site_term(t), model_.basis().site_basis(t), params_));
   for (int local_i = 0; local_i < mA; ++local_i) {
-    int i = (myrow*nb) + local_i + (local_i/nb)*nb*(nprow-1);
+    int i = translate_l2g_row(local_i); //(myrow*nb) + local_i + (local_i/nb)*nb*(nprow-1);
     int is = basis_[i][s];
     for (int js = 0; js < ds; ++js) {
       typename alps::basis_states<I>::value_type target(basis_[i]);
@@ -168,7 +168,7 @@ void add_to_matrix(double* A, const int& nprow, const int& npcol, const int& myr
       int j = basis_.index(target);
       int local_offset_block = j / nb;
       if ((local_offset_block % npcol) == mycol) {
-	int local_j = (local_offset_block - mycol) / npcol * nb + j % nb;
+	int local_j = translate_l2g_col(j);  //(local_offset_block - mycol) / npcol * nb + j % nb;
 	if (local_j >= nA) {
 	  std::cerr << "error: local_j=" << local_j << " nA=" << nA << endl;
 	  exit(23);
@@ -182,7 +182,7 @@ void add_to_matrix(double* A, const int& nprow, const int& npcol, const int& myr
 
 
 template<typename T>
-void add_to_matrix(double* A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb, bond_descriptor ed, site_descriptor vd0, site_descriptor vd1) const {
+void add_to_matrix(Distributed_Matrix& A, const int& nprow, const int& npcol, const int& myrow, const int& mycol, const int& nb, bond_descriptor ed, site_descriptor vd0, site_descriptor vd1) const {
   int ZERO = 0;
   int dim = dimension();
   int mA = numroc_( dim, nb, myrow, ZERO, nprow );

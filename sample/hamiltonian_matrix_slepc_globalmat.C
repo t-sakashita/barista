@@ -43,7 +43,7 @@ int main (int argc, char *argv[])
   EPS            eps;             /* eigenproblem solver context */
   Mat            A;               /* operator matrix */
   Vec            x;
-  const EPSType  type;
+  EPSType  type;
   PetscInt       N,n=10,m,i,j,II,Istart,Iend,nev;
   PetscScalar    w;
   PetscBool      flag;
@@ -124,9 +124,9 @@ int main (int argc, char *argv[])
                       Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscLogDouble v1, v2, elapsed_time;
-  ierr = PetscGetTime(&v1);CHKERRQ(ierr);
+  ierr = PetscTime(&v1);CHKERRQ(ierr);
   ierr = EPSSolve(eps);CHKERRQ(ierr);
-  ierr = PetscGetTime(&v2);CHKERRQ(ierr);
+  ierr = PetscTime(&v2);CHKERRQ(ierr);
   elapsed_time = v2 - v1;   
 
   /*

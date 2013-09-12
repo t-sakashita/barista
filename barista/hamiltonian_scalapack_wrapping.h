@@ -6,16 +6,17 @@
 #include <alps/model.h>
 #include <boost/foreach.hpp>
 
+/*
 extern "C" {
-  /* BLACS */
+  // BLACS
   void blacs_pinfo_( int& mypnum, int& nprocs); 
   void blacs_get_( const int& context, const int& request, int& value ); 
   void blacs_gridinfo_(const int& ictxt, int& nprow, int& npcol, int& myrow, int& mycol);
   void blacs_gridinit_(const int& ictxt, char* order, int& nprow, int& npcol );
-  void blacs_gridexit_(const int& ictxt);
+  //void blacs_gridexit_(int& ictxt);
   void blacs_exit_(const int& cont);
   void blacs_barrier_(const int& ictxt, const char* score);
-  /* ScaLAPACK */
+  // ScaLAPACK 
   void sl_init_(int, int, int);
   void descinit_(int* desc, const int& m, const int& n, const int& mb, const int& nb,
                  const int& irsrc, const int& icsrc, const int& ixtxt, const int& lld, int& info);
@@ -42,6 +43,7 @@ extern "C" {
 
   void pdlaprnt_(const int& m, const int& n, const double* A, const int& ia, const int& ja, const int* descA, const int& irprnt, const int& icprnt, char* cmatnm, const int& nout, double* work);
 }
+*/
 
 namespace barista {
 

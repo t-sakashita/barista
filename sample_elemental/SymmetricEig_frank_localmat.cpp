@@ -105,9 +105,6 @@ main( int argc, char* argv[] )
             X.Print("Eigenvectors of H");
         }
 
-        // Sort the eigensolution,
-        SortEig( w, X );
-
         if( print )
         {
             w.Print("Sorted eigenvalues of H");

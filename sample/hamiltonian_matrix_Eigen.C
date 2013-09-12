@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) {
   double time = (double)(end-start)/CLOCKS_PER_SEC;
 
   std::cout << "ev=" << ev.transpose() << std::endl;
+  std::cout << "U=" << U.transpose() << std::endl;  
   cout << "time=" << time << endl;
 
 }
