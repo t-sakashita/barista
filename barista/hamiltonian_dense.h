@@ -1,12 +1,12 @@
-#ifndef BARISTA_HAMILTONIAN_ELEMENTAL_H
-#define BARISTA_HAMILTONIAN_ELEMENTAL_H
+#ifndef BARISTA_HAMILTONIAN_H
+#define BARISTA_HAMILTONIAN_H
 
 #include <alps/parameter.h>
 #include <alps/lattice.h>
 #include <alps/model.h>
 #include <boost/foreach.hpp>
 
-
+#include <rokko/distributed_matrix.hpp>
 #include <iostream>
 using namespace std;
 
@@ -38,8 +38,6 @@ public:
     add_to_matrix(A, e, lattice_.source(e), lattice_.target(e));
   }
 
-
-
   template<typename MATRIX>
   void add_to_matrix(MATRIX& A, const site_descriptor v) const {
     int t = get(alps::site_type_t(), lattice_.graph(), v);
@@ -55,23 +53,16 @@ public:
     // the global matrix is Hermitian. However, only one triangle of the 
     // matrix actually needs to be filled, the symmetry can be implicit.
     //
-    const int colShift = A.ColShift(); // first row we own
-    const int rowShift = A.RowShift(); // first col we own
-    const int colStride = A.ColStride();
-    const int rowStride = A.RowStride();
-    const int localHeight = A.LocalHeight();
-    const int localWidth = A.LocalWidth();
-
-    for(int iLocal = 0; iLocal < localHeight; ++iLocal) {
-      const int i = colShift + iLocal*colStride;
+    for(int iLocal = 0; iLocal < A.get_m_local(); ++iLocal) {
+      int i = A.translate_l2g_row(iLocal);
       int is = basis_[i][s];
       for (int js = 0; js < ds; ++js) {
 	typename alps::basis_states<I>::value_type target(basis_[i]);
 	target[s] = js;
 	int j = basis_.index(target);
-	if ((j < dim) && ((j - rowShift) % rowStride == 0)) {
-	  int jLocal = (j - rowShift) / rowStride;
-	  A.UpdateLocal(iLocal, jLocal, site_matrix[is][js]);
+	if ((j < dim) && A.is_gindex_mycol(j)) {
+	  int jLocal = A.translate_g2l_col(j);
+	  A.update_local(iLocal, jLocal, site_matrix[is][js]);
 	}
       } // end for js = ...
 
@@ -98,15 +89,8 @@ public:
     // the global matrix is Hermitian. However, only one triangle of the 
     // matrix actually needs to be filled, the symmetry can be implicit.
     //
-    const int colShift = A.ColShift(); // first row we own
-    const int rowShift = A.RowShift(); // first col we own
-    const int colStride = A.ColStride();
-    const int rowStride = A.RowStride();
-    const int localHeight = A.LocalHeight();
-    const int localWidth = A.LocalWidth();
-
-    for(int iLocal = 0; iLocal < localHeight; ++iLocal) {
-      const int i = colShift + iLocal*colStride;
+    for(int iLocal = 0; iLocal < A.get_m_local(); ++iLocal) {
+      int i = A.translate_l2g_row(iLocal);
 
       int is0 = basis_[i][s0];
       int is1 = basis_[i][s1];
@@ -116,9 +100,9 @@ public:
 	  target[s0] = js0;
 	  target[s1] = js1;
 	  int j = basis_.index(target);
-	  if ((j < dim) && ((j - rowShift) % rowStride == 0)) {
-	    int jLocal = (j - rowShift) / rowStride;
-	    A.UpdateLocal(iLocal, jLocal, bond_matrix[is0][is1][js0][js1]);
+	  if ((j < dim) && A.is_gindex_mycol(j)) {
+	    int jLocal = A.translate_g2l_col(j);
+	    A.update_local(iLocal, jLocal, bond_matrix[is0][is1][js0][js1]);
 	  }
 	}
       } // end for js0 = ...
@@ -135,4 +119,4 @@ private:
 
 } // end namespace barista
 
-#endif // BARISTA_HAMILTONIAN_ELEMENTAL_H
+#endif // BARISTA_HAMILTONIAN_H

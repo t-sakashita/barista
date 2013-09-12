@@ -47,7 +47,7 @@ include_directories(${PETSC_INCLUDE_DIRS})
 include_directories(${SLEPC_INCLUDE_DIR})
 
 include_directories(${ROKKO_INCLUDE_DIR})
-
+link_directories(${ROKKO_DIR}/lib)
 #include_directories(BEFORE ${EIGEN3_INCLUDE_DIR})
 
 # directories
