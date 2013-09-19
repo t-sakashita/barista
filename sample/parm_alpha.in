@@ -1,0 +1,7 @@
+LATTICE_LIBRARY = "lattice_hexagon.xml"
+MODEL_LIBRARY = "model_alpha.xml"
+LATTICE = "hexagon"
+N_total	= 2
+L       = 4
+ALPHA   = 1
+MODEL   = "alpha"
