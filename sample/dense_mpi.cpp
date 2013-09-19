@@ -21,8 +21,8 @@
 
 #include <rokko/collective.hpp>
 
-#include <barista/hamiltonian_dense.h>
 #include <rokko/utility/sort_eigenpairs.hpp>
+#include <barista/hamiltonian_dense_mpi.h>
 
 #include <boost/lexical_cast.hpp>
 

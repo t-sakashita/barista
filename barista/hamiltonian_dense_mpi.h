@@ -10,23 +10,18 @@
  *
  *****************************************************************************/
 
-#ifndef BARISTA_HAMILTONIAN_H
-#define BARISTA_HAMILTONIAN_H
+#ifndef BARISTA_HAMILTONIAN_DENSE_MPI_H
+#define BARISTA_HAMILTONIAN_DENSE_MPI_H
 
-#include <alps/parameter.h>
-#include <alps/lattice.h>
-#include <alps/model.h>
-#include <boost/foreach.hpp>
+#include <rokko/distributed_matrix.hpp>
+#include <barista/hamiltonian.h>
 
-#include <Eigen/Dense>
+#include <iostream>
 
 namespace barista {
 
-template<typename G = alps::coordinate_graph_type, typename I = short>
-class Hamiltonian;
-
 template<typename G, typename I>
-  void add_to_matrix(const Hamiltonian<G, I>& hamiltonian, Eigen::MatrixXd& matrix, const typename alps::graph_helper<G>::site_descriptor& v) {
+  void add_to_matrix(const Hamiltonian<G, I>& hamiltonian, rokko::distributed_matrix<rokko::matrix_col_major>& matrix, const typename alps::graph_helper<G>::site_descriptor& v) {
   typedef alps::graph_helper<G> lattice_type;
   typedef alps::model_helper<I> model_type;
   typedef typename lattice_type::site_descriptor site_descriptor;
@@ -38,20 +33,24 @@ template<typename G, typename I>
   int ds = hamiltonian.basis_.basis().get_site_basis(s).num_states();
   alps::multi_array<double, 2>
     site_matrix(get_matrix(double(), hamiltonian.model_.site_term(t), hamiltonian.model_.basis().site_basis(t), hamiltonian.params_));
-  for (int i = 0; i < dim; ++i) {
+  for(int iLocal = 0; iLocal < matrix.get_m_local(); ++iLocal) {
+    int i = matrix.translate_l2g_row(iLocal);
     int is = hamiltonian.basis_[i][s];
     for (int js = 0; js < ds; ++js) {
       typename alps::basis_states<I>::value_type target(hamiltonian.basis_[i]);
       target[s] = js;
       int j = hamiltonian.basis_.index(target);
-      if (j < dim) matrix(i,j) += site_matrix[is][js];
+      if ((j < dim) && matrix.is_gindex_mycol(j)) {
+        int jLocal = matrix.translate_g2l_col(j);
+        matrix.update_local(iLocal, jLocal, site_matrix[is][js]);
+      }
     }
   }
 }
 
 
 template<typename G, typename I>
-  void add_to_matrix(const Hamiltonian<G, I>& hamiltonian, Eigen::MatrixXd& matrix, typename alps::graph_helper<G>::bond_descriptor ed, typename alps::graph_helper<G>::site_descriptor vd0, typename alps::graph_helper<G>::site_descriptor vd1) {
+  void add_to_matrix(const Hamiltonian<G, I>& hamiltonian, rokko::distributed_matrix<rokko::matrix_col_major>& matrix, typename alps::graph_helper<G>::bond_descriptor ed, typename alps::graph_helper<G>::site_descriptor vd0, typename alps::graph_helper<G>::site_descriptor vd1) {
   int t = get(alps::bond_type_t(), hamiltonian.lattice_.graph(), ed);
   int st0 = get(alps::site_type_t(), hamiltonian.lattice_.graph(), vd0);
   int st1 = get(alps::site_type_t(), hamiltonian.lattice_.graph(), vd1);
@@ -62,7 +61,8 @@ template<typename G, typename I>
   int ds1 = hamiltonian.basis_.basis().get_site_basis(s1).num_states();
   alps::multi_array<double, 4>
     bond_matrix(alps::get_matrix(double(), hamiltonian.model_.bond_term(t), hamiltonian.model_.basis().site_basis(st0), hamiltonian.model_.basis().site_basis(st1), hamiltonian.params_));
-  for (int i = 0; i < dim; ++i) {
+  for(int iLocal = 0; iLocal < matrix.get_m_local(); ++iLocal) {
+    int i = matrix.translate_l2g_row(iLocal);
     int is0 = hamiltonian.basis_[i][s0];
     int is1 = hamiltonian.basis_[i][s1];
     for (int js0 = 0; js0 < ds0; ++js0) {
@@ -71,7 +71,10 @@ template<typename G, typename I>
 	target[s0] = js0;
 	target[s1] = js1;
 	int j = hamiltonian.basis_.index(target);
-	if (j < dim) matrix(i,j) += bond_matrix[is0][is1][js0][js1];
+	if ((j < dim) && matrix.is_gindex_mycol(j)) {
+	  int jLocal = matrix.translate_g2l_col(j);
+	  matrix.update_local(iLocal, jLocal, bond_matrix[is0][is1][js0][js1]);
+	}
       }
     }
   }
@@ -80,51 +83,20 @@ template<typename G, typename I>
 
 
 template<typename G, typename I>
-void fill_func(const Hamiltonian<G, I>& hamiltonian, Eigen::MatrixXd& matrix) {
+void fill_func(const Hamiltonian<G, I>& hamiltonian, rokko::distributed_matrix<rokko::matrix_col_major>& matrix) {
   typedef alps::graph_helper<G> lattice_type;
   typedef alps::model_helper<I> model_type;
   typedef typename lattice_type::site_descriptor site_descriptor;
   typedef typename lattice_type::bond_descriptor bond_descriptor;
 
   int dim = hamiltonian.dimension();
-  for (int i = 0; i < dim; ++i)
-    for (int j = 0; j < dim; ++j)
-      matrix(i,j) = 0;
+  matrix.set_zeros();
   BOOST_FOREACH(site_descriptor v, hamiltonian.lattice_.sites())
     add_to_matrix(hamiltonian, matrix, v);
   BOOST_FOREACH(bond_descriptor e, hamiltonian.lattice_.bonds())
     add_to_matrix(hamiltonian, matrix, e, hamiltonian.lattice_.source(e), hamiltonian.lattice_.target(e));
 }
 
-template<typename G, typename I>
-class Hamiltonian {
-private:
-  typedef alps::graph_helper<G> lattice_type;
-  typedef alps::model_helper<I> model_type;
-  typedef typename lattice_type::site_descriptor site_descriptor;
-  typedef typename lattice_type::bond_descriptor bond_descriptor;
-
-public:
-  Hamiltonian(alps::Parameters const& p) : params_(p), lattice_(params_), model_(lattice_, params_),
-    basis_(alps::basis_states_descriptor<I>(model_.basis(), lattice_.graph())) {
-  }
-
-  int dimension() const { return basis_.size(); }
-
-  template<typename Matrix>
-  void fill(Matrix& matrix) const {
-    fill_func(*this, matrix);
-  }
-
-    //private:
- public:
-  alps::Parameters params_;
-  lattice_type lattice_;
-  model_type model_;
-  alps::basis_states<I> basis_;
-};
-
-
 } // end namespace barista
 
-#endif // BARISTA_HAMILTONIAN_H
+#endif // BARISTA_HAMILTONIAN_DENSE_MPI_H

@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
   barista::Hamiltonian<> hamiltonian(params);
   matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());
-  hamiltonian.fill<double>(matrix);
+  hamiltonian.fill(matrix);
   //std::cout << matrix << std::endl;
 
   Eigen::SelfAdjointEigenSolver<matrix_type>  ES(matrix);

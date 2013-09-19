@@ -8,6 +8,6 @@ int main() {
   alps::Parameters params(std::cin);
   barista::Hamiltonian<> hamiltonian(params);
   matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());
-  hamiltonian.fill<double>(matrix);
+  hamiltonian.fill(matrix);
   std::cout << matrix << std::endl;
 }

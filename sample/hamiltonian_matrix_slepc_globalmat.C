@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
   cout << "L=" << params["L"] << endl;
   barista::Hamiltonian<> hamiltonian(params);
   matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());        
-  hamiltonian.fill<double>(matrix);                            
+  hamiltonian.fill(matrix);                            
   //std::cout << matrix << std::endl;
   N = hamiltonian.dimension();
 

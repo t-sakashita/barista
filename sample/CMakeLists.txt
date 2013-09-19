@@ -1,5 +1,4 @@
-set(TESTS hamiltonian_matrix_Eigen)
-#set(TESTS MatrixXd
+set(TESTS hamiltonian_matrix hamiltonian_matrix_Eigen)
 
 foreach(name ${TESTS})
   add_executable(${name} ${name}.C)
@@ -88,16 +87,19 @@ endif()
 #  endforeach(name)
 #endif()
 
+# serial sample
+set(TESTS2 dense)
+foreach(name ${TESTS2})
+  add_executable(${name} ${name}.cpp)
+  target_link_libraries(${name} rokko ${ALPS_LIBRARIES})
+endforeach(name)
 
-set(TESTS2 hamiltonian_matrix_dense)
+# mpi sample
+set(TESTS2 dense_mpi)
 include_directories(${ELEMENTAL_INCLUDE_DIRS})
 foreach(name ${TESTS2})
   add_executable(${name} ${name}.cpp)
-  #リンクオプション
-  target_link_libraries(${name} ${ALPS_LIBRARIES} rokko rokko ${ELEMENTAL_LIBRARIES} ${ELPA_LIB} ${SCALAPACK_LIB} ${MPI_CXX_LIBRARIES})
-  ##LD_FLAG
-  ##コンパイラオプション
-  #add_alps_test(${name})
+  target_link_libraries(${name} ${ALPS_LIBRARIES} rokko ${ELEMENTAL_LIBRARIES} ${ELPA_LIB} ${SCALAPACK_LIB} ${MPI_CXX_LIBRARIES})
 endforeach(name)
 #endif()
 

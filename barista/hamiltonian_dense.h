@@ -1,77 +1,67 @@
-#ifndef BARISTA_HAMILTONIAN_H
-#define BARISTA_HAMILTONIAN_H
+/*****************************************************************************
+ *
+ * Barista: Eigen-decomposition library for quantum statistical physics
+ *
+ * Copyright (C) 2012-2013 by Tatsuya Sakashita <t-sakashita@issp.u-tokyo.ac.jp>,
+ *                            Synge Todo <wistaria@comp-phys.org>
+ *
+ * Distributed under the Boost Software License, Version 1.0. (See accompanying
+ * file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ *
+ *****************************************************************************/
 
-#include <alps/parameter.h>
-#include <alps/lattice.h>
-#include <alps/model.h>
-#include <boost/foreach.hpp>
+#ifndef BARISTA_HAMILTONIAN_DENSE_H
+#define BARISTA_HAMILTONIAN_DENSE_H
 
-#include <rokko/distributed_matrix.hpp>
+//#include <alps/parameter.h>
+//#include <alps/lattice.h>
+//#include <alps/model.h>
+//#include <boost/foreach.hpp>
+
+#include <rokko/localized_matrix.hpp>
+#include <barista/hamiltonian.h>
+
 #include <iostream>
+
 using namespace std;
 
 namespace barista {
 
-template<typename G = alps::coordinate_graph_type, typename I = short>
-class Hamiltonian {
 
-private:
-  typedef alps::graph_helper<G> lattice_type;
-  typedef alps::model_helper<I> model_type;
-  typedef typename lattice_type::site_descriptor site_descriptor;
-  typedef typename lattice_type::bond_descriptor bond_descriptor;
-
-public:
-  Hamiltonian(alps::Parameters const& p) : params_(p), lattice_(params_), model_(lattice_, params_),
-    basis_(alps::basis_states_descriptor<I>(model_.basis(), lattice_.graph())) {
-  }
-
-  int dimension() const { return basis_.size(); }
-
-  template<typename MATRIX>
-  void fill(MATRIX& A) const {  
-    int dim = dimension();
+template<>
+void Hamiltonian::add_to_matrix(rokko::localized_matrix<rokko::matrix_col_major>& A, const site_descriptor v) const {
+  int t = get(alps::site_type_t(), lattice_.graph(), v);
+  int s = get(alps::site_index_t(), lattice_.graph(), v);
+  int dim = dimension();
+  int ds = basis_.basis().get_site_basis(s).num_states();
+  alps::multi_array<double, 2>
+  site_matrix(get_matrix(double(), model_.site_term(t), model_.basis().site_basis(t), params_));
+  
+  // Fill the matrix since we did not pass in a buffer. 
+  //
+  // We will fill entry (i,j) with the value i+j so that 
+  // the global matrix is Hermitian. However, only one triangle of the 
+  // matrix actually needs to be filled, the symmetry can be implicit.
+    //
+  for(int iLocal = 0; iLocal < A.get_m_local(); ++iLocal) {
+    int i = A.translate_l2g_row(iLocal);
+    int is = basis_[i][s];
+    for (int js = 0; js < ds; ++js) {
+      typename alps::basis_states<I>::value_type target(basis_[i]);
+      target[s] = js;
+      int j = basis_.index(target);
+      if ((j < dim) && A.is_gindex_mycol(j)) {
+	int jLocal = A.translate_g2l_col(j);
+	A.update_local(iLocal, jLocal, site_matrix[is][js]);
+      }
+    } // end for js = ...
     
-    BOOST_FOREACH(site_descriptor v, lattice_.sites())
-    add_to_matrix(A, v);
-    BOOST_FOREACH(bond_descriptor e, lattice_.bonds())
-    add_to_matrix(A, e, lattice_.source(e), lattice_.target(e));
-  }
-
-  template<typename MATRIX>
-  void add_to_matrix(MATRIX& A, const site_descriptor v) const {
-    int t = get(alps::site_type_t(), lattice_.graph(), v);
-    int s = get(alps::site_index_t(), lattice_.graph(), v);
-    int dim = dimension();
-    int ds = basis_.basis().get_site_basis(s).num_states();
-    alps::multi_array<double, 2>
-    site_matrix(get_matrix(double(), model_.site_term(t), model_.basis().site_basis(t), params_));
-
-    // Fill the matrix since we did not pass in a buffer. 
-    //
-    // We will fill entry (i,j) with the value i+j so that 
-    // the global matrix is Hermitian. However, only one triangle of the 
-    // matrix actually needs to be filled, the symmetry can be implicit.
-    //
-    for(int iLocal = 0; iLocal < A.get_m_local(); ++iLocal) {
-      int i = A.translate_l2g_row(iLocal);
-      int is = basis_[i][s];
-      for (int js = 0; js < ds; ++js) {
-	typename alps::basis_states<I>::value_type target(basis_[i]);
-	target[s] = js;
-	int j = basis_.index(target);
-	if ((j < dim) && A.is_gindex_mycol(j)) {
-	  int jLocal = A.translate_g2l_col(j);
-	  A.update_local(iLocal, jLocal, site_matrix[is][js]);
-	}
-      } // end for js = ...
-
-    } // end for i = ...
-  }
+  } // end for i = ...
+}
 
 
-  template<typename MATRIX>
-  void add_to_matrix(MATRIX& A, bond_descriptor ed, site_descriptor vd0, site_descriptor vd1) const {    
+template<>
+void Hamiltonian::add_to_matrix(rokko::distributed_matrix<rokko::matrix_col_major>& A, bond_descriptor ed, site_descriptor vd0, site_descriptor vd1) const {    
     int t = get(alps::bond_type_t(), lattice_.graph(), ed);
     int st0 = get(alps::site_type_t(), lattice_.graph(), vd0);
     int st1 = get(alps::site_type_t(), lattice_.graph(), vd1);
@@ -107,16 +97,9 @@ public:
 	}
       } // end for js0 = ...
     } // end for i = ...
-  }
+}
 
-
-private:
-  alps::Parameters params_;
-  lattice_type lattice_;
-  model_type model_;
-  alps::basis_states<I> basis_;
-};
 
 } // end namespace barista
 
-#endif // BARISTA_HAMILTONIAN_H
+#endif // BARISTA_HAMILTONIAN_DENSE_H

@@ -52,7 +52,7 @@ link_directories(${ROKKO_DIR}/lib)
 
 # directories
 add_subdirectory(sample)
-add_subdirectory(sample_elemental)
+add_subdirectory(test)
 
 # tests
 enable_testing()
