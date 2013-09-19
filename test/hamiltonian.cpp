@@ -13,7 +13,9 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include <barista/hamiltonian.h>
+#include <barista/hamiltonian_mpi.h>
 
+#include <rokko/solver.hpp>
 #include <rokko/distributed_matrix.hpp>
 #include <rokko/localized_matrix.hpp>
 #include <rokko/localized_vector.hpp>

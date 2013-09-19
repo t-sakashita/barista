@@ -13,7 +13,8 @@
 #include <mpi.h>
 
 #include <iostream>
-#include <barista/hamiltonian_dense.h>
+#include <barista/hamiltonian.h>
+#include <barista/hamiltonian_dense_mpi.h>
 
 #include <rokko/solver.hpp>
 #include <rokko/grid.hpp>
@@ -46,19 +47,25 @@ int main(int argc, char *argv[]) {
 
   MPI_Comm comm = MPI_COMM_WORLD;
   rokko::grid g(comm, rokko::grid_col_major);
+  int myrank = g.get_myrank();
   const int root = 0;
 
   rokko::distributed_matrix<matrix_major> mat(dim, dim, g, solver);
   hamiltonian.fill(mat);
   mat.print();
-  rokko::localized_matrix<matrix_major> lmat1(dim, dim);
+  rokko::localized_matrix<rokko::matrix_col_major> lmat1; //(dim, dim);
   rokko::gather(mat, lmat1, root);
 
-  rokko::localized_matrix<rokko::matrix_col_major> lmat2(dim, dim);
-  hamiltonian.fill(lmat2);
-
-  std::cout << "lmat1=" << std::endl << lmat1 << std::endl;
-  std::cout << "lmat2=" << std::endl << lmat2 << std::endl;
+  if (myrank == root) {
+    rokko::localized_matrix<matrix_major> lmat2(dim, dim);
+    hamiltonian.fill(lmat2);
+    if (lmat1 != lmat2) {
+      MPI_Abort(MPI_COMM_WORLD, 22);      
+    }
+    std::cout << "OK" << std::endl;
+    //std::cout << "lmat1=" << std::endl << lmat1 << std::endl;
+    //std::cout << "lmat2=" << std::endl << lmat2 << std::endl;
+  }
 
   solver.finalize();
   MPI_Finalize();

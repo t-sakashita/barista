@@ -6,6 +6,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/config)
 
 # include variables for Rokko
 include(${ROKKO_DIR}/config/UseRokko.cmake)
+include(${ROKKO_DIR}/config/add_rokko_test.cmake)
 
 # find ALPS Library
 find_package(ALPS REQUIRED PATHS ${ALPS_ROOT_DIR} $ENV{ALPS_HOME} NO_SYSTEM_ENVIRONMENT_PATH)
