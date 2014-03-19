@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   barista::Hamiltonian<> hamiltonian(params);
   int dim = hamiltonian.dimension();
 
-  rokko::solver solver(solver_name);
+  rokko::parallel_dense_solver solver(solver_name);
   solver.initialize(argc, argv);
 
   MPI_Comm comm = MPI_COMM_WORLD;
