@@ -3,7 +3,8 @@
  * Barista: Eigen-decomposition library for quantum statistical physics
  *
  * Copyright (C) 2012-2013 by Tatsuya Sakashita <t-sakashita@issp.u-tokyo.ac.jp>,
- *                            Synge Todo <wistaria@comp-phys.org>
+ *                         by Synge Todo <wistaria@comp-phys.org>,
+ *               2014      by Ryo IGARASHI <rigarash@issp.u-tokyo.ac.jp>
  *
  * Distributed under the Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -59,8 +60,9 @@ template<typename G, typename I>
   int dim = hamiltonian.basis_.size();
   int ds0 = hamiltonian.basis_.basis().get_site_basis(s0).num_states();
   int ds1 = hamiltonian.basis_.basis().get_site_basis(s1).num_states();
-  alps::multi_array<double, 4>
-    bond_matrix(alps::get_matrix(double(), hamiltonian.model_.bond_term(t), hamiltonian.model_.basis().site_basis(st0), hamiltonian.model_.basis().site_basis(st1), hamiltonian.params_));
+  alps::basis_states_descriptor<I> basis(hamiltonian.model_.basis(), hamiltonian.lattice_.graph());
+  alps::multi_array<std::pair<double, bool>, 4>
+    bond_matrix(alps::get_fermionic_matrix(double(), hamiltonian.model_.bond_term(t), hamiltonian.model_.basis().site_basis(st0), hamiltonian.model_.basis().site_basis(st1), hamiltonian.params_));
   for(int iLocal = 0; iLocal < matrix.get_m_local(); ++iLocal) {
     int i = matrix.translate_l2g_row(iLocal);
     int is0 = hamiltonian.basis_[i][s0];
@@ -72,8 +74,23 @@ template<typename G, typename I>
 	target[s1] = js1;
 	int j = hamiltonian.basis_.index(target);
 	if ((j < dim) && matrix.is_gindex_mycol(j)) {
-	  int jLocal = matrix.translate_g2l_col(j);
-	  matrix.update_local(iLocal, jLocal, bond_matrix[is0][is1][js0][js1]);
+            double val = bond_matrix[is0][is1][js0][js1].first;
+            if (bond_matrix[is0][is1][js0][js1].second) {
+                // calculate fermionic sign
+                bool f = (s1 >= s0);
+                int start = std::min(s0, s1);
+                int end   = std::max(s0, s1);
+                for (int k = start; k < end; ++k) {
+                    if (is_fermionic(hamiltonian.model_.site_basis(hamiltonian.lattice_.site_type(k)), basis[k][hamiltonian.basis_[i][k]])) {
+                        f = !f;
+                    }
+                }
+                if (f) {
+                    val *= -1;
+                }
+            }
+            int jLocal = matrix.translate_g2l_col(j);
+            matrix.update_local(iLocal, jLocal, val);
 	}
       }
     }
