@@ -53,8 +53,8 @@ int main (int argc, char *argv[])
 
   std::ifstream  ifs(argv[1]);
   alps::Parameters params(ifs);     
-  params["L"] = 3;
-  cout << "L=" << params["L"] << endl;
+//  params["L"] = 3;
+//  cout << "L=" << params["L"] << endl;
   barista::Hamiltonian<> hamiltonian(params);
   //matrix_type matrix(hamiltonian.dimension(), hamiltonian.dimension());        
   //std::cout << matrix << std::endl;
@@ -69,7 +69,11 @@ int main (int argc, char *argv[])
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   ierr = MatSetUp(A);CHKERRQ(ierr);
 
+  PetscLogDouble v00, v01, elapsed_time0;
+  ierr = PetscTime(&v00);CHKERRQ(ierr);
   hamiltonian.fill<double>(A);             
+  ierr = PetscTime(&v01);CHKERRQ(ierr);
+  elapsed_time0 = v01 - v00;
 
   /*
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
@@ -85,7 +89,7 @@ int main (int argc, char *argv[])
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
   PetscPrintf(PETSC_COMM_WORLD,"N=%d\n", N);
-  MatView(A, PETSC_VIEWER_STDOUT_WORLD);
+  // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
                 Create the eigensolver and set various options
@@ -147,7 +151,8 @@ int main (int argc, char *argv[])
   ierr = EPSPrintSolution(eps,PETSC_NULL);CHKERRQ(ierr);
   ierr = EPSDestroy(&eps);CHKERRQ(ierr);
   ierr = MatDestroy(&A);CHKERRQ(ierr);
-  PetscPrintf(PETSC_COMM_WORLD,"elapsed time: =%lf\n", elapsed_time);
+  PetscPrintf(PETSC_COMM_WORLD,"elapsed time(Create Hamiltonian): = %lf\n", elapsed_time0);
+  PetscPrintf(PETSC_COMM_WORLD,"elapsed time(Solve Hamiltonian) : = %lf\n", elapsed_time);
 
   ierr = SlepcFinalize();CHKERRQ(ierr);
   return 0;
